@@ -40,20 +40,20 @@ type UserRepository struct {
     base *repokit.SpannerRepository[User]
 }
 
-func (u *userNoTxRepository) Save(ctx context.Context, user domain.User) (domain.User, error) {
+func (u *UserRepository) Save(ctx context.Context, user User) (User, error) {
     err := u.base.Save(ctx, user)
     return user, err
 }
 
 
-func userRowMapper(row *spanner.Row) (domain.User, error) {
-    var u domain.User
+func userRowMapper(row *spanner.Row) (User, error) {
+    var u User
     err := row.Columns(&u.UserID, &u.Email)
     return u, err
 }
 
 func NewUserRepository(spannerClient *spanner.Client) UserRepository {
-  base := repokit.NewBaseRepository[domain.User](
+  base := repokit.NewBaseRepository[User](
     spannerClient, 
     "tb_users",  // Table name
     []string{"user_id"}, // Primary key columns
