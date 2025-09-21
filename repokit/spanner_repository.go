@@ -73,6 +73,29 @@ func (r *SpannerRepository[T]) Mutation(entity T) *spanner.Mutation {
 	return r.mutation(entity)
 }
 
+func (r *SpannerRepository[T]) Single(ctx context.Context, sql string, params map[string]interface{}) (T, bool, error) {
+	var entity T
+	stmt := spanner.Statement{SQL: sql, Params: params}
+
+	iter := r.client.Single().Query(ctx, stmt)
+	defer iter.Stop()
+
+	row, err := iter.Next()
+	if err != nil {
+		if errors.Is(err, iterator.Done) {
+			return entity, false, nil
+		}
+		return entity, false, err
+	}
+
+	entity, err = r.rowMapper(row)
+	if err != nil {
+		return entity, false, err
+	}
+
+	return entity, true, nil
+}
+
 // FindByID fetches a single entity by its primary key.
 func (r *SpannerRepository[T]) FindByID(ctx context.Context, key interface{}, columns []string) (T, bool, error) {
 	var entity T
@@ -172,14 +195,14 @@ func (r *SpannerRepository[T]) FindByIDs(ctx context.Context, keys []interface{}
 
 // Save performs an upsert (insert or update) using a mutation.
 func (r *SpannerRepository[T]) Save(ctx context.Context, entity T) error {
-	m := r.mutationBuilder(entity)
+	m := r.mutation(entity)
 	_, err := r.client.Apply(ctx, []*spanner.Mutation{m})
 	return err
 }
 
 // Update updates an entity in the table.
 func (r *SpannerRepository[T]) Update(ctx context.Context, entity T) error {
-	m := r.mutationBuilder(entity)
+	m := r.mutation(entity)
 	_, err := r.client.Apply(ctx, []*spanner.Mutation{m})
 	return err
 }
@@ -261,7 +284,7 @@ func (r *SpannerRepository[T]) SaveTx(tx Transaction, entity T) error {
 	if !ok {
 		return fmt.Errorf("invalid transaction type")
 	}
-	m := r.mutationBuilder(entity)
+	m := r.mutation(entity)
 	return stx.ReadWriteTransaction().BufferWrite([]*spanner.Mutation{m})
 }
 
@@ -291,7 +314,7 @@ func (r *SpannerRepository[T]) UpdateTx(tx Transaction, entity T) error {
 	if !ok {
 		return fmt.Errorf("invalid transaction type")
 	}
-	m := r.mutationBuilder(entity)
+	m := r.mutation(entity)
 	return stx.ReadWriteTransaction().BufferWrite([]*spanner.Mutation{m})
 }
 
@@ -389,10 +412,10 @@ func NewBaseRepository[T any](
 	mutationBuilder func(entity T) *spanner.Mutation,
 ) *SpannerRepository[T] {
 	return &SpannerRepository[T]{
-		client:          client,
-		tableName:       tableName,
-		primaryKeys:     primaryKeys,
-		rowMapper:       rowMapper,
-		mutationBuilder: mutationBuilder,
+		client:      client,
+		tableName:   tableName,
+		primaryKeys: primaryKeys,
+		rowMapper:   rowMapper,
+		mutation:    mutationBuilder,
 	}
 }
