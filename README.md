@@ -52,11 +52,15 @@ func userRowMapper(row *spanner.Row) (User, error) {
     return u, err
 }
 
+func userMutationBuilder(u domain.User) *spanner.Mutation {
+    return spanner.InsertOrUpdate(userTable, columns, []interface{}{u.UserID, u.Email})
+}
+
 func NewUserRepository(spannerClient *spanner.Client) UserRepository {
   base := repokit.NewBaseRepository[User](
     spannerClient, 
-    "tb_users",  // Table name
-    []string{"user_id"}, // Primary key columns
+    "tb_users", 
+    []string{"user_id"},
     userRowMapper,
     userMutationBuilder,
   )
