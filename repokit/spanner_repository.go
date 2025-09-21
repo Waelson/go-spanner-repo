@@ -11,6 +11,11 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// SpannerRepository provides a generic, type-safe repository implementation
+// for Cloud Spanner. It supports CRUD, transactional operations, pagination,
+// and key-returning inserts.
+//
+// T represents the domain entity mapped to a Spanner table.
 type SpannerRepository[T any] struct {
 	client          *spanner.Client
 	tableName       string
@@ -56,6 +61,7 @@ func structToMap(key interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
+// FindByID fetches a single entity by its primary key.
 func (r *SpannerRepository[T]) FindByID(ctx context.Context, key interface{}, columns []string) (T, bool, error) {
 	var entity T
 
@@ -85,6 +91,7 @@ func (r *SpannerRepository[T]) FindByID(ctx context.Context, key interface{}, co
 	return entity, true, nil
 }
 
+// FindAll retrieves all rows from the table.
 func (r *SpannerRepository[T]) FindAll(ctx context.Context, columns []string) ([]T, error) {
 	stmt := spanner.Statement{
 		SQL: fmt.Sprintf("SELECT %s FROM %s", buildColumnList(columns), r.tableName),
@@ -112,6 +119,7 @@ func (r *SpannerRepository[T]) FindAll(ctx context.Context, columns []string) ([
 	return results, nil
 }
 
+// FindByIDs fetches multiple entities by their primary keys.
 func (r *SpannerRepository[T]) FindByIDs(ctx context.Context, keys []interface{}, columns []string) ([]T, error) {
 	var spannerKeys []spanner.Key
 	for _, k := range keys {
@@ -150,18 +158,21 @@ func (r *SpannerRepository[T]) FindByIDs(ctx context.Context, keys []interface{}
 	return results, nil
 }
 
+// Save performs an upsert (insert or update) using a mutation.
 func (r *SpannerRepository[T]) Save(ctx context.Context, entity T) error {
 	m := r.mutationBuilder(entity)
 	_, err := r.client.Apply(ctx, []*spanner.Mutation{m})
 	return err
 }
 
+// Update updates an entity in the table.
 func (r *SpannerRepository[T]) Update(ctx context.Context, entity T) error {
 	m := r.mutationBuilder(entity)
 	_, err := r.client.Apply(ctx, []*spanner.Mutation{m})
 	return err
 }
 
+// Delete removes an entity from the table by primary key.
 func (r *SpannerRepository[T]) Delete(ctx context.Context, key interface{}) error {
 	params, err := structToMap(key)
 	if err != nil {
@@ -178,6 +189,7 @@ func (r *SpannerRepository[T]) Delete(ctx context.Context, key interface{}) erro
 	return err
 }
 
+// SaveReturningKey inserts a row using DML and returns the generated primary key.
 func (r *SpannerRepository[T]) SaveReturningKey(
 	ctx context.Context,
 	insertSQL string,
@@ -202,6 +214,7 @@ func (r *SpannerRepository[T]) SaveReturningKey(
 	return err
 }
 
+// SaveReturningKeyTx is the transactional version of SaveReturningKey.
 func (r *SpannerRepository[T]) SaveReturningKeyTx(
 	ctx context.Context,
 	txn *spanner.ReadWriteTransaction,
@@ -224,16 +237,19 @@ func (r *SpannerRepository[T]) SaveReturningKeyTx(
 	return nil
 }
 
+// Exists checks whether an entity exists by primary key.
 func (r *SpannerRepository[T]) Exists(ctx context.Context, key interface{}) (bool, error) {
 	_, found, err := r.FindByID(ctx, key, r.primaryKeys)
 	return found, err
 }
 
+// SaveTx performs an upsert inside a transaction.
 func (r *SpannerRepository[T]) SaveTx(txn *spanner.ReadWriteTransaction, entity T) error {
 	m := r.mutationBuilder(entity)
 	return txn.BufferWrite([]*spanner.Mutation{m})
 }
 
+// DeleteTx removes an entity inside a transaction.
 func (r *SpannerRepository[T]) DeleteTx(txn *spanner.ReadWriteTransaction, key interface{}) error {
 	params, err := structToMap(key)
 	if err != nil {
@@ -249,12 +265,14 @@ func (r *SpannerRepository[T]) DeleteTx(txn *spanner.ReadWriteTransaction, key i
 	return txn.BufferWrite([]*spanner.Mutation{m})
 }
 
-// UpdateTx idem SaveTx
+// UpdateTx updates an entity inside a transaction.
 func (r *SpannerRepository[T]) UpdateTx(txn *spanner.ReadWriteTransaction, entity T) error {
 	m := r.mutationBuilder(entity)
 	return txn.BufferWrite([]*spanner.Mutation{m})
 }
 
+// FindPage fetches entities with cursor-based pagination.
+// pageToken should be the last seen primary key from a previous page.
 func (r *SpannerRepository[T]) FindPage(
 	ctx context.Context,
 	pageSize int,
@@ -312,6 +330,33 @@ func (r *SpannerRepository[T]) FindPage(
 	return results, lastKey, nil
 }
 
+// NewBaseRepository creates a new generic SpannerRepository for a given entity type.
+//
+// Parameters:
+//   - client: the Cloud Spanner client used to execute queries and mutations.
+//   - tableName: the name of the Spanner table associated with the entity.
+//   - primaryKeys: a slice of column names representing the primary key(s) of the table,
+//     in the exact order defined in the schema.
+//   - rowMapper: a function that maps a Spanner row (*spanner.Row) into an instance of T.
+//     It is responsible for decoding database columns into the Go struct fields.
+//   - mutationBuilder: a function that builds a Spanner mutation (*spanner.Mutation) from
+//     an entity T. Typically, this defines how inserts/updates (UPSERT) are performed.
+//
+// Returns:
+//   - *SpannerRepository[T]: a fully configured repository ready to perform CRUD,
+//     transactional operations, and queries on the target table.
+//
+// Example:
+//
+//	repo := repokit.NewBaseRepository[User](
+//	    client,
+//	    "Users",
+//	    []string{"user_id"},
+//	    userRowMapper,
+//	    userMutationBuilder,
+//	)
+//
+//	user, found, err := repo.FindByID(ctx, UserKey{ID: "123"}, []string{"user_id", "email"})
 func NewBaseRepository[T any](
 	client *spanner.Client,
 	tableName string,
