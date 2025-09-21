@@ -52,7 +52,7 @@ func structToMap(key interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{}, v.NumField())
 	for i := 0; i < v.NumField(); i++ {
 		field := t.Field(i)
-		name := field.Tag.Get("spanner") // usamos tag `spanner:"col_name"`
+		name := field.Tag.Get("spanner")
 		if name == "" {
 			name = strings.ToLower(field.Name)
 		}
