@@ -61,6 +61,10 @@ func structToMap(key interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
+func (r *SpannerRepository[T]) Client() *spanner.Client {
+	return r.client
+}
+
 // FindByID fetches a single entity by its primary key.
 func (r *SpannerRepository[T]) FindByID(ctx context.Context, key interface{}, columns []string) (T, bool, error) {
 	var entity T
