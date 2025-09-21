@@ -25,6 +25,73 @@ go get github.com/Waelson/go-spanner-repo
 ```
 ---
 
+## How to user
+### Create an entity
+```go
+type User struct{
+	UserID string
+	Email string
+}
+```
+
+### Implement specialized Repository
+```go
+type UserRepository struct {
+    base *repokit.SpannerRepository[User]
+}
+
+func (u *userNoTxRepository) Save(ctx context.Context, user domain.User) (domain.User, error) {
+    err := u.base.Save(ctx, user)
+    return user, err
+}
+
+
+func userRowMapper(row *spanner.Row) (domain.User, error) {
+    var u domain.User
+    err := row.Columns(&u.UserID, &u.Email)
+    return u, err
+}
+
+func NewUserRepository(spannerClient *spanner.Client) UserRepository {
+  base := repokit.NewBaseRepository[domain.User](
+    spannerClient, 
+    "tb_users",  // Table name
+    []string{"user_id"}, // Primary key columns
+    userRowMapper,
+    userMutationBuilder,
+  )
+  return &userTxRepository{base: base}	
+}
+```
+### Consuming Repository
+```go
+func main(){
+  ctx := context.Background()
+  
+  // Create Spanner client
+  spannerClient, err := createSpannerClient(ctx)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  userRepository := repository.UserRepository(spannerClient)
+
+  // Create new user
+  user := domain.User{
+    UserID: uuid.New().String(), // Generate UUID for user ID
+    Email:  "fake@email.com",
+  }
+  
+  
+  // Insert user
+  user, err = userRepository.Save(ctx, user)
+  if err != nil {
+    log.Fatal(err)
+  }  
+  
+}
+```
+
 ## 📖 API Overview
 
 | Method                                     | Description                              |
