@@ -17,11 +17,11 @@ import (
 //
 // T represents the domain entity mapped to a Spanner table.
 type SpannerRepository[T any] struct {
-	client          *spanner.Client
-	tableName       string
-	primaryKeys     []string
-	rowMapper       func(*spanner.Row) (T, error)
-	mutationBuilder func(entity T) *spanner.Mutation
+	client      *spanner.Client
+	tableName   string
+	primaryKeys []string
+	rowMapper   func(*spanner.Row) (T, error)
+	mutation    func(entity T) *spanner.Mutation
 }
 
 func buildColumnList(columns []string) string {
@@ -63,6 +63,14 @@ func structToMap(key interface{}) (map[string]interface{}, error) {
 
 func (r *SpannerRepository[T]) Client() *spanner.Client {
 	return r.client
+}
+
+func (r *SpannerRepository[T]) RowMapper(row *spanner.Row) (T, error) {
+	return r.rowMapper(row)
+}
+
+func (r *SpannerRepository[T]) Mutation(entity T) *spanner.Mutation {
+	return r.mutation(entity)
 }
 
 // FindByID fetches a single entity by its primary key.
