@@ -40,19 +40,33 @@ type UserRepository struct {
     base *repokit.SpannerRepository[User]
 }
 
+type UserKey struct {
+    ID string `spanner:"user_id"` //Primary key column name
+}
+
 func (u *UserRepository) Save(ctx context.Context, user User) (User, error) {
     err := u.base.Save(ctx, user)
     return user, err
 }
 
+func (u *userNoTxRepository) Delete(ctx context.Context, userID string) error {
+    key := UserKey{ID: userID}
+    return u.base.Delete(ctx, key)
+}
 
-func userRowMapper(row *spanner.Row) (User, error) {
+// Update modifies an existing user in Spanner.
+func (u *userNoTxRepository) Update(ctx context.Context, user User) error {
+    return u.base.Update(ctx, user)
+}
+
+
+func rowToUser(row *spanner.Row) (User, error) {
     var u User
     err := row.Columns(&u.UserID, &u.Email)
     return u, err
 }
 
-func userMutationBuilder(u domain.User) *spanner.Mutation {
+func userToMutation(u domain.User) *spanner.Mutation {
     return spanner.InsertOrUpdate(
 		userTable, 
 		[]string{"user_id", "email"}, 
@@ -64,8 +78,8 @@ func NewUserRepository(spannerClient *spanner.Client) UserRepository {
     spannerClient, 
     "tb_users", 
     []string{"user_id"},
-    userRowMapper,
-    userMutationBuilder,
+    rowToUser,
+    userToMutation,
   )
   return &userTxRepository{base: base}	
 }
