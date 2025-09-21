@@ -23,6 +23,7 @@ It provides generic abstractions for CRUD, transactional operations, key-returni
 ```bash
 go get github.com/Waelson/go-spanner-repo
 ```
+---
 
 ## ⚠️ Notes
 - Transactions: Use SaveTx, UpdateTx, DeleteTx inside a ReadWriteTransaction.
@@ -30,11 +31,12 @@ go get github.com/Waelson/go-spanner-repo
 - Pagination: Implemented via cursor (pageToken = last seen PK). Avoids OFFSET for performance reasons.
 - Composite PKs: Supported; ensure you pass the struct with all primary key fields.
 
+---
 ## 🧪 Testing
 ```bash
 go test ./repokit -v
 ```
-
+---
 ## 🤝 Contributing
 Contributions are welcome!
 Please open an issue or submit a PR with clear description and tests.
