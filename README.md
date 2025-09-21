@@ -25,6 +25,23 @@ go get github.com/Waelson/go-spanner-repo
 ```
 ---
 
+## 📖 API Overview
+
+| Method                                     | Description                              |
+| ------------------------------------------ | ---------------------------------------- |
+| `FindByID(ctx, key, columns)`              | Fetch entity by primary key              |
+| `FindAll(ctx, columns)`                    | Fetch all rows                           |
+| `FindByIDs(ctx, keys, columns)`            | Lookup multiple entities by key          |
+| `Save(ctx, entity)`                        | Insert or update (UPSERT)                |
+| `Update(ctx, entity)`                      | Update entity                            |
+| `Delete(ctx, key)`                         | Delete by primary key                    |
+| `SaveReturningKey(ctx, sql, params, dest)` | Insert with DML and return generated key |
+| `SaveTx`, `UpdateTx`, `DeleteTx`           | Transactional versions of mutations      |
+| `SaveReturningKeyTx`                       | Transactional key-returning insert       |
+| `Exists(ctx, key)`                         | Check if entity exists                   |
+
+---
+
 ## ⚠️ Notes
 - Transactions: Use SaveTx, UpdateTx, DeleteTx inside a ReadWriteTransaction.
 - Key returning inserts: Requires DML (INSERT ... THEN RETURN). Works with GENERATE_UUID() or sequence-backed INT64.
