@@ -41,7 +41,7 @@ type UserRepository struct {
 }
 
 type UserKey struct {
-    ID string `spanner:"user_id"` //Primary key column name
+    ID string `spanner:"user_id"`
 }
 
 func (u *UserRepository) Save(ctx context.Context, user User) (User, error) {
@@ -54,11 +54,9 @@ func (u *userNoTxRepository) Delete(ctx context.Context, userID string) error {
     return u.base.Delete(ctx, key)
 }
 
-// Update modifies an existing user in Spanner.
 func (u *userNoTxRepository) Update(ctx context.Context, user User) error {
     return u.base.Update(ctx, user)
 }
-
 
 func rowToUser(row *spanner.Row) (User, error) {
     var u User
