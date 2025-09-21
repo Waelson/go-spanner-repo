@@ -53,7 +53,10 @@ func userRowMapper(row *spanner.Row) (User, error) {
 }
 
 func userMutationBuilder(u domain.User) *spanner.Mutation {
-    return spanner.InsertOrUpdate(userTable, []string{"user_id", "email"}, []interface{}{u.UserID, u.Email})
+    return spanner.InsertOrUpdate(
+		userTable, 
+		[]string{"user_id", "email"}, 
+		[]interface{}{u.UserID, u.Email})
 }
 
 func NewUserRepository(spannerClient *spanner.Client) UserRepository {
