@@ -244,13 +244,21 @@ func (r *SpannerRepository[T]) Exists(ctx context.Context, key interface{}) (boo
 }
 
 // SaveTx performs an upsert inside a transaction.
-func (r *SpannerRepository[T]) SaveTx(txn *spanner.ReadWriteTransaction, entity T) error {
+func (r *SpannerRepository[T]) SaveTx(tx Transaction, entity T) error {
+	stx, ok := tx.(*SpannerTransaction)
+	if !ok {
+		return fmt.Errorf("invalid transaction type")
+	}
 	m := r.mutationBuilder(entity)
-	return txn.BufferWrite([]*spanner.Mutation{m})
+	return stx.ReadWriteTransaction().BufferWrite([]*spanner.Mutation{m})
 }
 
 // DeleteTx removes an entity inside a transaction.
-func (r *SpannerRepository[T]) DeleteTx(txn *spanner.ReadWriteTransaction, key interface{}) error {
+func (r *SpannerRepository[T]) DeleteTx(tx Transaction, key interface{}) error {
+	stx, ok := tx.(*SpannerTransaction)
+	if !ok {
+		return fmt.Errorf("invalid transaction type")
+	}
 	params, err := structToMap(key)
 	if err != nil {
 		return err
@@ -262,13 +270,17 @@ func (r *SpannerRepository[T]) DeleteTx(txn *spanner.ReadWriteTransaction, key i
 	}
 
 	m := spanner.Delete(r.tableName, spanner.Key(values))
-	return txn.BufferWrite([]*spanner.Mutation{m})
+	return stx.ReadWriteTransaction().BufferWrite([]*spanner.Mutation{m})
 }
 
 // UpdateTx updates an entity inside a transaction.
-func (r *SpannerRepository[T]) UpdateTx(txn *spanner.ReadWriteTransaction, entity T) error {
+func (r *SpannerRepository[T]) UpdateTx(tx Transaction, entity T) error {
+	stx, ok := tx.(*SpannerTransaction)
+	if !ok {
+		return fmt.Errorf("invalid transaction type")
+	}
 	m := r.mutationBuilder(entity)
-	return txn.BufferWrite([]*spanner.Mutation{m})
+	return stx.ReadWriteTransaction().BufferWrite([]*spanner.Mutation{m})
 }
 
 // FindPage fetches entities with cursor-based pagination.
