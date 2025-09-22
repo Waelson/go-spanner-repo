@@ -24,6 +24,8 @@ type SpannerRepository[T any] struct {
 	mutation    func(entity T) *spanner.Mutation
 }
 
+// buildColumnList builds a comma-separated list of columns for a SELECT statement.
+// If no columns are provided, it defaults to "*".
 func buildColumnList(columns []string) string {
 	if len(columns) == 0 {
 		return "*"
@@ -31,6 +33,7 @@ func buildColumnList(columns []string) string {
 	return strings.Join(columns, ", ")
 }
 
+// buildWhereClause builds a WHERE clause using the provided keys in the form "col = @col".
 func buildWhereClause(keys []string) string {
 	parts := make([]string, len(keys))
 	for i, k := range keys {
@@ -39,6 +42,8 @@ func buildWhereClause(keys []string) string {
 	return strings.Join(parts, " AND ")
 }
 
+// structToMap converts a struct (or pointer to struct) into a map[string]interface{},
+// using the `spanner` tag if present, otherwise the field name in lowercase.
 func structToMap(key interface{}) (map[string]interface{}, error) {
 	v := reflect.ValueOf(key)
 	if v.Kind() == reflect.Ptr {
@@ -61,18 +66,23 @@ func structToMap(key interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
+// Client returns the underlying Spanner client.
 func (r *SpannerRepository[T]) Client() *spanner.Client {
 	return r.client
 }
 
+// RowMapper exposes the rowMapper function used to convert a spanner.Row into an entity.
 func (r *SpannerRepository[T]) RowMapper(row *spanner.Row) (T, error) {
 	return r.rowMapper(row)
 }
 
+// Mutation exposes the mutation builder function for the repository.
 func (r *SpannerRepository[T]) Mutation(entity T) *spanner.Mutation {
 	return r.mutation(entity)
 }
 
+// Single executes a custom SQL query expected to return a single row.
+// Returns the mapped entity, a boolean indicating existence, and any error encountered.
 func (r *SpannerRepository[T]) Single(ctx context.Context, sql string, params map[string]interface{}) (T, bool, error) {
 	var entity T
 	stmt := spanner.Statement{SQL: sql, Params: params}

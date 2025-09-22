@@ -6,11 +6,11 @@ import (
 
 // SpannerRepositoryBuilder provides a builder for constructing SpannerRepository instances.
 type SpannerRepositoryBuilder[T any] struct {
-	client          *spanner.Client
-	tableName       string
-	primaryKeys     []string
-	rowMapper       func(*spanner.Row) (T, error)
-	mutationBuilder func(entity T) *spanner.Mutation
+	client      *spanner.Client
+	tableName   string
+	primaryKeys []string
+	rowMapper   func(*spanner.Row) (T, error)
+	mutation    func(entity T) *spanner.Mutation
 }
 
 // NewSpannerRepositoryBuilder initializes a new builder for SpannerRepository.
@@ -42,9 +42,9 @@ func (b *SpannerRepositoryBuilder[T]) WithRowMapper(mapper func(*spanner.Row) (T
 	return b
 }
 
-// WithMutationBuilder sets the entity-to-mutation builder function.
-func (b *SpannerRepositoryBuilder[T]) WithMutationBuilder(builder func(entity T) *spanner.Mutation) *SpannerRepositoryBuilder[T] {
-	b.mutationBuilder = builder
+// WithMutation sets the entity-to-mutation builder function.
+func (b *SpannerRepositoryBuilder[T]) WithMutation(builder func(entity T) *spanner.Mutation) *SpannerRepositoryBuilder[T] {
+	b.mutation = builder
 	return b
 }
 
@@ -55,6 +55,6 @@ func (b *SpannerRepositoryBuilder[T]) Build() *SpannerRepository[T] {
 		tableName:   b.tableName,
 		primaryKeys: b.primaryKeys,
 		rowMapper:   b.rowMapper,
-		mutation:    b.mutationBuilder,
+		mutation:    b.mutation,
 	}
 }
